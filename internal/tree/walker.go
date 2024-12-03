@@ -3,19 +3,38 @@ package tree
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Walker struct {
-	Pattern string
+	Pattern    string
+	ShowHidden bool // 숨김 파일 표시 여부
 }
 
-// 순회하면서 tree 완성
+func (w *Walker) shouldSkip(name string) bool {
+	// 숨김 파일이고 ShowHidden이 false면 스킵
+	if !w.ShowHidden && strings.HasPrefix(name, ".") {
+		return true
+	}
+
+	// 패턴이 지정되어 있으면 패턴 매칭 검사
+	if w.Pattern != "" {
+		matched, err := filepath.Match(w.Pattern, name)
+		if err != nil || !matched {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (w *Walker) Walk(root string) (*Node, error) {
 	info, err := os.Stat(root)
 	if err != nil {
 		return nil, err
 	}
 
+	// 루트 노드의 경우는 숨김 파일이어도 허용
 	node := &Node{
 		Path:  root,
 		Name:  filepath.Base(root),
@@ -38,7 +57,14 @@ func (w *Walker) Walk(root string) (*Node, error) {
 	}
 
 	for _, entry := range entries {
-		childPath := filepath.Join(root, entry.Name())
+		name := entry.Name()
+
+		// 숨김 파일 및 패턴 검사
+		if w.shouldSkip(name) {
+			continue
+		}
+
+		childPath := filepath.Join(root, name)
 		child, err := w.Walk(childPath)
 		if err != nil || child == nil {
 			continue

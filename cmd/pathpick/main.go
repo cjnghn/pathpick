@@ -13,11 +13,13 @@ func main() {
 	// CLI 플래그 정의
 	path := flag.String("path", ".", "시작 디렉토리 경로")
 	pattern := flag.String("pattern", "", "파일 패턴 (예: *.go)")
+	showHidden := flag.Bool("a", false, "숨김 파일 표시")
 	flag.Parse()
 
 	// 파일시스템 워커 초기화
 	walker := &tree.Walker{
-		Pattern: *pattern,
+		Pattern:    *pattern,
+		ShowHidden: *showHidden,
 	}
 
 	// UI 초기화 및 시작

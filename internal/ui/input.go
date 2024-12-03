@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/atotto/clipboard"
+	"github.com/cjnghn/pathpick/internal/tree"
 	"github.com/eiannone/keyboard"
 )
 
@@ -41,41 +42,60 @@ func (d *Display) eventLoop() error {
 	}
 }
 
-func (d *Display) moveUp() {
-	if d.current.Parent == nil {
-		return
-	}
-	siblings := d.current.Parent.Children
-	for i, node := range siblings {
-		if node == d.current && i > 0 {
-			d.current = siblings[i-1]
-			return
-		}
-	}
-}
-
+// moveDown moves the cursor to the next visible node
 func (d *Display) moveDown() {
-	if d.current.Parent == nil {
-		if len(d.current.Children) > 0 {
-			d.current = d.current.Children[0]
+	var nextNode *tree.Node
+	var allNodes []*tree.Node
+	d.collectVisibleNodes(d.root, &allNodes)
+
+	// Find current node in the list and move to next
+	for i, node := range allNodes {
+		if node == d.current && i < len(allNodes)-1 {
+			nextNode = allNodes[i+1]
+			break
 		}
-		return
 	}
-	siblings := d.current.Parent.Children
-	for i, node := range siblings {
-		if node == d.current && i < len(siblings)-1 {
-			d.current = siblings[i+1]
-			return
-		}
+
+	if nextNode != nil {
+		d.current = nextNode
 	}
 }
 
+// moveUp moves the cursor to the previous visible node
+func (d *Display) moveUp() {
+	var prevNode *tree.Node
+	var allNodes []*tree.Node
+	d.collectVisibleNodes(d.root, &allNodes)
+
+	// Find current node in the list and move to previous
+	for i, node := range allNodes {
+		if node == d.current && i > 0 {
+			prevNode = allNodes[i-1]
+			break
+		}
+	}
+
+	if prevNode != nil {
+		d.current = prevNode
+	}
+}
+
+// collectVisibleNodes collects all visible nodes in depth-first order
+func (d *Display) collectVisibleNodes(node *tree.Node, nodes *[]*tree.Node) {
+	*nodes = append(*nodes, node)
+	for _, child := range node.Children {
+		d.collectVisibleNodes(child, nodes)
+	}
+}
+
+// moveIn changes focus to first child if exists
 func (d *Display) moveIn() {
 	if len(d.current.Children) > 0 {
 		d.current = d.current.Children[0]
 	}
 }
 
+// moveOut changes focus to parent if exists
 func (d *Display) moveOut() {
 	if d.current.Parent != nil {
 		d.current = d.current.Parent
